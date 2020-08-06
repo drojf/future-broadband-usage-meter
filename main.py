@@ -21,6 +21,13 @@ def get_usage_from_html(html):
 
     return match[1]
 
+def get_banked_data_from_html(html):
+    # Search the text for the broadband data usage
+    match = re.search(r'banked data[^\d]*(\d+(\s*\.\s*\d+)?)', html, re.I)
+    if not match:
+        raise Exception("Can't find banked data on webpage")
+
+    return match[1]
 
 def load_portal_using_cookies(session):
     """ Throws an exception if no saved cookies or can't access website """
@@ -48,24 +55,30 @@ def load_portal_fresh_login(session):
     # Post the payload to the site to log in
     return session.post(LOGIN_URL, data=payload)
 
-
-def get_usage(session):
+def get_portal_response(session):
     # TODO: differentiate between not being able to find usage in html/other errors, and invalid username/password err
     try:
-        response = load_portal_using_cookies(session)
-        return get_usage_from_html(response.text)
+        return load_portal_using_cookies(session)
     except:
-        response = load_portal_fresh_login(session)
-        print("Couldn't use cookies to get usage - Please login again:\n")
-        return get_usage_from_html(response.text)
-
+        print("Couldn't use cookies to get usage - please login again.")
+        return load_portal_fresh_login(session)
 
 def main():
     session = requests.Session()
 
-    usage_gb = get_usage(session)
+    response = get_portal_response(session)
 
-    print(f"You have used {usage_gb} GB of data.")
+    try:
+        print(f"You have used {get_usage_from_html(response.text)} GB of data.")
+    except Exception as e:
+        print(f"Failed to retrieve usage from website! Reason:")
+        print(e)
+
+    try:
+        print(f"You have {get_banked_data_from_html(response.text)} GB of banked data.")
+    except Exception as e:
+        print(f"Failed to retrieve usage from website! Reason:")
+        print(e)
 
     # Save cookies to file for next time
     with open(COOKIES_PICKLE_PATH, 'wb') as cookies_file_r:
