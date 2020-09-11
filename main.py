@@ -58,9 +58,13 @@ def load_portal_fresh_login(session):
 def get_portal_response(session):
     # TODO: differentiate between not being able to find usage in html/other errors, and invalid username/password err
     try:
-        return load_portal_using_cookies(session)
-    except:
-        print("Couldn't use cookies to get usage - please login again.")
+        response = load_portal_using_cookies(session)
+        # TODO: need a better way to detect rejected login - why does it not raise an exception anymore?
+        if '<input id="user_login' in response.text:
+            raise Exception("Redirected to login page")
+        return response
+    except Exception as e:
+        print(f"Couldn't use cookies to get usage - please login again. Reason: [{e}]")
         return load_portal_fresh_login(session)
 
 def main():
